@@ -143,7 +143,7 @@
     min-width: 0;
     .mu-flat-button-wrapper {
       .mu-flat-button-label {
-        font-family: Arial, sans-serif;
+        font-family: 'arial-unicode', sans-serif;
         text-decoration: none;
         text-transform: none;
         padding: 0 5px;
