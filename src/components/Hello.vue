@@ -33,9 +33,9 @@
     div.selections(v-if="homograph.length")
       h2 Your selections
       mu-flat-button.homograph(v-for="index in selected", :label="homograph[index]")
-    div.checkGame(v-if="selected.length")
+    div.checkGame(v-if="matches.length")
       h2 Matches
-      h3 {{homographData.length - selected.length}} left
+      h3 {{homographData.length - matches.length}} left
       match(v-for="match in matches", :letter-index="match.index", :word="match.word")
 </template>
 
@@ -78,14 +78,17 @@
       getHomograph () {
         let _this = this
         this.getHomographDialog = false
+        _this.homograph = []
+        _this.originalText = []
+        _this.homographData = []
+        _this.selected = []
+        _this.matches = []
         this.$http.post('https://byui-homograph.appspot.com/getHomograph', {difficulty_low: _this.difficulty, difficulty_high: _this.difficulty, frequency: _this.frequency}).then(response => {
           let receivedData = response.body
           _this.homograph = receivedData.altered_string
           _this.originalText = receivedData.string
           _this.homographData = receivedData.homographs
-          _this.selected = []
-          _this.matches = []
-          console.log(receivedData.homographs)
+          _this.printHomographDataToConsole()
         })
       },
       homographClick (index, e) {
@@ -93,6 +96,10 @@
           let selectedIndex = this.selected.indexOf(index)
           this.selected.splice(selectedIndex, 1)
           e.target.parentElement.style.backgroundColor = null
+          let matchIndex = _.findIndex(this.matches, function (o) { return o.word_index === index })
+          if (matchIndex !== -1) {
+            this.matches.splice(matchIndex, 1)
+          }
         } else {
           e.target.parentElement.style.backgroundColor = '#FFEBEE'
           this.selected.push(index)
@@ -101,20 +108,25 @@
         }
       },
       checkMatch (index) {
-        console.log(index)
-        let found = _.findIndex(this.homographData, function (o) {
-          console.log(o.word_index)
-          console.log(index)
-          return o.word_index === index
-        })
-        console.log(found)
-        if (found > 0) {
+        let found = this.findMatch(index)
+        if (found !== -1) {
           this.matches.push({
             word: this.homograph[index],
-            index: this.homographData[found].character_index
+            index: this.homographData[found].character_index,
+            word_index: index
           })
         }
-        console.log(this.matches)
+        this.matches = _.sortBy(this.matches, function (o) { return o.word_index })
+      },
+      findMatch (index) {
+        return _.findIndex(this.homographData, function (o) {
+          return o.word_index === index
+        })
+      },
+      printHomographDataToConsole () {
+        _.each(this.homographData, function (o) {
+          console.info('Look For ' + o.character_changed_to + ' in word "' + o.original_word + '" at index ' + String(o.word_index))
+        })
       }
     }
   }
