@@ -11,6 +11,7 @@
     "lint": "eslint --ext .js,.vue src"
   },
   "dependencies": {
+    "keen-ui": "^1.0.0",
     "less": "^2.7.2",
     "less-loader": "^4.0.4",
     "lodash": "^4.17.4",

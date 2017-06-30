@@ -11,7 +11,6 @@
     },
     computed: {
       show: function () {
-        console.log(this.letterIndex)
         let pre = this.word.slice(0, this.letterIndex)
         let post = this.word.slice(this.letterIndex + 1)
         let char = this.word.charAt(this.letterIndex)
