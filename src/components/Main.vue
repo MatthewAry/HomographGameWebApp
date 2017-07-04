@@ -4,7 +4,7 @@
     div.controls
       mu-raised-button(label="Instructions", @click="openDialog")
       mu-raised-button(label="Get Homograph", @click="openHomograph")
-    mu-dialog(:open="getHomographDialog", title="Game Settings", @close="close")
+    mu-dialog(:open="getHomographDialog", title="Game Settings", @close="close", bodyClass="settings")
       ui-select(:has-search='true', label='What is your Native Language?', :options="languages", v-model="chosenLanguage")
       | Difficulty Level {{(difficulty * 100) - 84}}
       mu-slider(name="Difficulty", :max="0.99", :min="0.85", :step="0.01", v-model="difficulty")
@@ -40,7 +40,7 @@
       match(v-for="match in matches", :letter-index="match.index", :word="match.word")
     mu-dialog(:open="homographData.length - matches.length === 0 && homographData.length !== 0", title="Great Job!", @close="clear")
       | You managed to find all the Homographs for this problem!
-      mu-flat-button(slot="actions", primary, @click="clear", label="Thanks!")
+      mu-flat-button(slot="actions", primary, @click="saveGame", label="Thanks!")
 
 </template>
 
@@ -51,9 +51,7 @@
   import Match from './Matches.vue'
   import MuDialog from '../../node_modules/muse-ui/src/dialog/dialog'
   import UiSelect from '../../node_modules/keen-ui/src/UiSelect'
-  /**
-   * Created by Matthew Ary on 6/29/17.
-   */
+  import moment from 'moment'
 
   export default {
     components: {
@@ -68,7 +66,7 @@
       return {
         userId: null,
         token: null,
-        time: 0,
+        time: null,
         difficulty: 0.85,
         frequency: 0.10,
         dialog: false,
@@ -266,7 +264,10 @@
           {'value': 'yo', 'label': 'Yoruba', 'nativeName': 'Yorùbá'},
           {'value': 'za', 'label': 'Zhuang, Chuang', 'nativeName': 'Saɯ cueŋƅ, Saw cuengh'}
         ],
-        chosenLanguage: ''
+        chosenLanguage: '',
+        clickData: [],
+        realDifficulty: [],
+        stringId: null
       }
     },
     methods: {
@@ -294,7 +295,6 @@
       getHomograph () {
         let _this = this
         this.getHomographDialog = false
-        this.clear()
         this.$http.post('https://byui-homograph.appspot.com/getHomographGame', {
           difficulty_low: _this.difficulty,
           difficulty_high: _this.difficulty,
@@ -303,15 +303,20 @@
           token: _this.token
         }).then(response => {
           let receivedData = response.body
+          console.log(receivedData)
           _this.homograph = receivedData.altered_string
           _this.originalText = receivedData.string
           _this.homographData = receivedData.homographs
           _this.token = receivedData.token
+          _this.stringId = receivedData.string_bank_id
+          _this.realDifficulty = receivedData.difficulty
           _this.printHomographDataToConsole()
+          _this.time = moment()
         })
       },
       homographClick (index, e) {
         if (this.selected.includes(index)) {
+          // Deselect
           let selectedIndex = this.selected.indexOf(index)
           this.selected.splice(selectedIndex, 1)
           e.target.parentElement.style.backgroundColor = null
@@ -320,22 +325,27 @@
             this.matches.splice(matchIndex, 1)
           }
         } else {
+          // Select
           e.target.parentElement.style.backgroundColor = '#FFEBEE'
           this.selected.push(index)
-          this.checkMatch(index)
+          let isMatch = this.checkMatch(index)
+          this.recordClick(index, isMatch)
           this.selected = _.sortBy(this.selected, function (o) { return o })
         }
       },
       checkMatch (index) {
         let found = this.findMatch(index)
+        let match = false
         if (found !== -1) {
           this.matches.push({
             word: this.homograph[index],
             index: this.homographData[found].character_index,
             word_index: index
           })
+          match = found
         }
         this.matches = _.sortBy(this.matches, function (o) { return o.word_index })
+        return match
       },
       findMatch (index) {
         return _.findIndex(this.homographData, function (o) {
@@ -348,12 +358,55 @@
           console.info('Look For ' + o.character_changed_to + ' in word "' + o.original_word + '" at index ' + String(o.word_index))
         })
       },
+      recordClick (index, isMatch) {
+        let record = {
+          word: this.homograph[index],
+          time: moment.utc(moment().diff(this.time)).format('HH:mm:ss'),
+          match: isMatch !== false,
+          word_index: index
+        }
+        if (isMatch !== false) {
+          record.data = this.homographData[isMatch]
+        }
+        this.time = moment()
+        this.clickData.push(record)
+      },
+      saveGame () {
+        let _this = this
+        let gameData = {
+          string: this.originalText,
+          altered_string: this.homograph,
+          homographs: this.homographData,
+          clickData: this.clickData,
+          string_bank_id: this.stringId,
+          difficulty: this.realDifficulty,
+          frequency: this.frequency
+        }
+        console.log(gameData)
+        this.$http.post('https://byui-homograph.appspot.com/saveGame', {
+          uuid: _this.userId,
+          token: _this.token,
+          game: JSON.stringify(gameData)
+        }).then(response => {
+          console.log(response)
+        })
+        this.clear()
+      },
       clear () {
         this.homograph = []
         this.originalText = []
         this.homographData = []
         this.selected = []
         this.matches = []
+        this.time = null
+        this.clickData = []
+        this.realDifficulty = []
+        this.userId = null
+        this.token = null
+        this.stringId = null
+        this.difficulty = 0.85
+        this.frequency = 0.10
+        this.chosenLanguage = ''
       }
     }
   }
@@ -395,11 +448,10 @@
     margin-top: 15px;
   }
 
-  .mu-dialog {
-    .mu-dialog-body {
-      height: 350px;
-    }
+  .settings {
+    height: 350px;
   }
+
 
   .controls {
     .mu-raised-button {

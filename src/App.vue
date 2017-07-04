@@ -32,7 +32,7 @@
   }
 
   html {
-    font-size: 100%;
+    font-size: 100% !important;
   }
 
   #background {
