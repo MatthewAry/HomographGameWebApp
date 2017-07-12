@@ -2,10 +2,11 @@
   div.hello
     h1 Spot The Homograph
     div.controls
+      mu-raised-button(label="Reset", @click="clear")
       mu-raised-button(label="Instructions", @click="openDialog")
       mu-raised-button(label="Get Homograph", @click="openHomograph")
     mu-dialog(:open="getHomographDialog", title="Game Settings", @close="close", bodyClass="settings")
-      ui-select(:has-search='true', label='What is your Native Language?', :options="languages", v-model="chosenLanguage")
+      ui-select(:has-search='true', label='What is your Native Language?', :options="languages", v-model="chosenLanguage", :invalid="languageInvalid")
       | Difficulty Level {{(difficulty * 100) - 84}}
       mu-slider(name="Difficulty", :max="0.99", :min="0.85", :step="0.01", v-model="difficulty")
       | Frequency {{Math.floor(frequency * 100)}}%
@@ -38,28 +39,23 @@
       h2 Matches
       h3 {{homographData.length - matches.length}} left
       match(v-for="match in matches", :letter-index="match.index", :word="match.word")
-    mu-dialog(:open="homographData.length - matches.length === 0 && homographData.length !== 0", title="Great Job!", @close="clear")
+    mu-dialog(:open="openSuccess", title="Great Job!", @close="clear")
       | You managed to find all the Homographs for this problem!
-      mu-flat-button(slot="actions", primary, @click="saveGame", label="Thanks!")
+      mu-flat-button(slot="actions", primary, @click="saveGame(false)", label="Close")
+      mu-flat-button(slot="actions", @click="saveGame(true)", label="New Homograph")
 
 </template>
 
 <script>
   import _ from 'lodash'
-  import MuRaisedButton from '../../node_modules/muse-ui/src/raisedButton/raisedButton'
-  import MuFlatButton from '../../node_modules/muse-ui/src/flatButton/flatButton'
   import Match from './Matches.vue'
-  import MuDialog from '../../node_modules/muse-ui/src/dialog/dialog'
-  import UiSelect from '../../node_modules/keen-ui/src/UiSelect'
+  import UiSelect from 'keen-ui/lib/UiSelect'
   import moment from 'moment'
 
   export default {
     components: {
       UiSelect,
-      MuDialog,
-      Match,
-      MuFlatButton,
-      MuRaisedButton
+      Match
     },
     name: 'main',
     data () {
@@ -67,6 +63,8 @@
         userId: null,
         token: null,
         time: null,
+        languageInvalid: false,
+        openSuccess: false,
         difficulty: 0.85,
         frequency: 0.10,
         dialog: false,
@@ -282,6 +280,9 @@
         this.getHomographDialog = true
       },
       getUser () {
+        if (!this.isLanguageSet()) {
+          return
+        }
         let _this = this
         this.$http.post('https://byui-homograph.appspot.com/newUser', {
           language: _this.chosenLanguage.value,
@@ -292,8 +293,29 @@
           _this.getHomograph()
         })
       },
+      isLanguageSet () {
+        if (this.chosenLanguage === '') {
+          this.languageInvalid = true
+          return false
+        } else {
+          this.languageInvalid = false
+          return true
+        }
+      },
       getHomograph () {
         let _this = this
+
+        // Clear data but not user data
+        this.homograph = []
+        this.originalText = []
+        this.homographData = []
+        this.selected = []
+        this.matches = []
+        this.time = null
+        this.clickData = []
+        this.realDifficulty = []
+        this.stringId = null
+
         this.getHomographDialog = false
         this.$http.post('https://byui-homograph.appspot.com/getHomographGame', {
           difficulty_low: _this.difficulty,
@@ -343,6 +365,9 @@
             word_index: index
           })
           match = found
+          if (this.homographData.length - this.matches.length === 0 && this.homographData.length !== 0) {
+            this.openSuccess = true
+          }
         }
         this.matches = _.sortBy(this.matches, function (o) { return o.word_index })
         return match
@@ -371,7 +396,7 @@
         this.time = moment()
         this.clickData.push(record)
       },
-      saveGame () {
+      saveGame (clearData) {
         let _this = this
         let gameData = {
           string: this.originalText,
@@ -382,15 +407,17 @@
           difficulty: this.realDifficulty,
           frequency: this.frequency
         }
-        console.log(gameData)
         this.$http.post('https://byui-homograph.appspot.com/saveGame', {
           uuid: _this.userId,
           token: _this.token,
           game: JSON.stringify(gameData)
         }).then(response => {
-          console.log(response)
+          _this.token = response.body.token
         })
-        this.clear()
+        this.openSuccess = false
+        if (clearData) {
+          this.getHomographDialog = true
+        }
       },
       clear () {
         this.homograph = []

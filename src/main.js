@@ -7,9 +7,7 @@ import MuseUi from 'muse-ui'
 import 'muse-ui/dist/muse-ui.css'
 import 'muse-ui/dist/theme-light.min.css'
 import VueResource from 'vue-resource'
-import KeenUI from 'keen-ui'
 
-Vue.use(KeenUI)
 Vue.use(MuseUi)
 Vue.use(VueResource)
 

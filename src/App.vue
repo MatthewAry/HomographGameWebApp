@@ -46,22 +46,11 @@
 
   @font-face {
     font-family: 'arial-unicode';
-    /*src: url('./assets/arial-unicode-ms.eot');*/
-    /*src: url('./assets/arial-unicode-ms.eot?#iefix') format('embedded-opentype'),*/
-    /*url('./assets/arial-unicode-ms.svg#my-font-family') format('svg'),*/
-    /*url('./assets/arial-unicode-ms.woff') format('woff'),*/
-    src: url('./assets/arial-unicode-ms.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
-  }
-
-  @font-face {
-    font-family: 'arial-web';
-    src: url('./assets/arial.eot');
-    src: url('./assets/arial.eot?#iefix') format('embedded-opentype'),
-    url('./assets/arial.svg#my-font-family') format('svg'),
-    url('./assets/arial.woff') format('woff'),
-    url('./assets/arial.ttf') format('truetype');
+    src: url('./assets/arial-unicode-ms.eot');
+    src: url('./assets/arial-unicode-ms.eot?#iefix') format('embedded-opentype'),
+    url('./assets/arial-unicode-ms.svg#my-font-family') format('svg'),
+    url('./assets/arial-unicode-ms.woff') format('woff'),
+    url('./assets/arial-unicode-ms.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
   }
