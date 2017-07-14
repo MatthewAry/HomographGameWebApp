@@ -29,6 +29,7 @@
       mu-flat-button(slot="actions", primary, @click="close", label="OK")
     div.sequence(v-if="homograph.length")
       h2 Make your choices
+        mu-flat-button.giveup(label="or give up", @click="giveUp", v-if="!saved")
       mu-flat-button.homograph(v-for="(word, index) in homograph", :label="word", @click="homographClick(index, $event)")
       h3 There are {{homographData.length}} words to find.
 
@@ -43,6 +44,11 @@
       | You managed to find all the Homographs for this problem!
       mu-flat-button(slot="actions", primary, @click="saveGame(false)", label="Close")
       mu-flat-button(slot="actions", @click="saveGame(true)", label="New Homograph")
+    mu-dialog(:open="tooBad", title="Better Luck Next Time", @close="clear")
+      | Here are the answers to the problem.
+      answer(:homograph="homograph", :homograph-data="homographData")
+      mu-flat-button(slot="actions", primary, @click="saveGame(false)", label="Close")
+      mu-flat-button(slot="actions", @click="saveGame(true)", label="New Homograph")
 
 </template>
 
@@ -51,11 +57,13 @@
   import Match from './Matches.vue'
   import UiSelect from 'keen-ui/lib/UiSelect'
   import moment from 'moment'
+  import Answer from './Answer.vue'
 
   export default {
     components: {
       UiSelect,
-      Match
+      Match,
+      Answer
     },
     name: 'main',
     data () {
@@ -65,6 +73,7 @@
         time: null,
         languageInvalid: false,
         openSuccess: false,
+        tooBad: false,
         difficulty: 0.85,
         frequency: 0.10,
         dialog: false,
@@ -265,7 +274,8 @@
         chosenLanguage: '',
         clickData: [],
         realDifficulty: [],
-        stringId: null
+        stringId: null,
+        saved: false
       }
     },
     methods: {
@@ -302,6 +312,9 @@
           return true
         }
       },
+      giveUp () {
+        this.tooBad = true
+      },
       getHomograph () {
         let _this = this
 
@@ -334,25 +347,31 @@
           _this.realDifficulty = receivedData.difficulty
           _this.printHomographDataToConsole()
           _this.time = moment()
+          _this.saved = false
         })
       },
       homographClick (index, e) {
-        if (this.selected.includes(index)) {
-          // Deselect
-          let selectedIndex = this.selected.indexOf(index)
-          this.selected.splice(selectedIndex, 1)
-          e.target.parentElement.style.backgroundColor = null
-          let matchIndex = _.findIndex(this.matches, function (o) { return o.word_index === index })
-          if (matchIndex !== -1) {
-            this.matches.splice(matchIndex, 1)
+        if (!this.saved) {
+          if (this.selected.includes(index)) {
+            // Deselect
+            let selectedIndex = this.selected.indexOf(index)
+            this.selected.splice(selectedIndex, 1)
+            e.target.parentElement.style.backgroundColor = null
+            let matchIndex = _.findIndex(this.matches, function (o) { return o.word_index === index })
+            if (matchIndex !== -1) {
+              this.matches.splice(matchIndex, 1)
+            }
+          } else {
+            // Select
+            e.target.parentElement.style.backgroundColor = '#FFEBEE'
+            this.selected.push(index)
+            let isMatch = this.checkMatch(index)
+            this.recordClick(index, isMatch)
+            this.selected = _.sortBy(this.selected, function (o) { return o })
           }
-        } else {
-          // Select
-          e.target.parentElement.style.backgroundColor = '#FFEBEE'
-          this.selected.push(index)
-          let isMatch = this.checkMatch(index)
-          this.recordClick(index, isMatch)
-          this.selected = _.sortBy(this.selected, function (o) { return o })
+          if (this.homographData.length - this.matches.length === 0 && this.homographData.length !== 0 && !this.saved) {
+            this.openSuccess = true
+          }
         }
       },
       checkMatch (index) {
@@ -365,9 +384,6 @@
             word_index: index
           })
           match = found
-          if (this.homographData.length - this.matches.length === 0 && this.homographData.length !== 0) {
-            this.openSuccess = true
-          }
         }
         this.matches = _.sortBy(this.matches, function (o) { return o.word_index })
         return match
@@ -397,26 +413,31 @@
         this.clickData.push(record)
       },
       saveGame (clearData) {
-        let _this = this
-        let gameData = {
-          string: this.originalText,
-          altered_string: this.homograph,
-          homographs: this.homographData,
-          clickData: this.clickData,
-          string_bank_id: this.stringId,
-          difficulty: this.realDifficulty,
-          frequency: this.frequency
-        }
-        this.$http.post('https://byui-homograph.appspot.com/saveGame', {
-          uuid: _this.userId,
-          token: _this.token,
-          game: JSON.stringify(gameData)
-        }).then(response => {
-          _this.token = response.body.token
-        })
-        this.openSuccess = false
-        if (clearData) {
-          this.getHomographDialog = true
+        if (!this.saved) {
+          let _this = this
+          let gameData = {
+            string: this.originalText,
+            altered_string: this.homograph,
+            homographs: this.homographData,
+            clickData: this.clickData,
+            string_bank_id: this.stringId,
+            difficulty: this.realDifficulty,
+            frequency: this.frequency
+          }
+          this.$http.post('https://byui-homograph.appspot.com/saveGame', {
+            uuid: _this.userId,
+            token: _this.token,
+            game: JSON.stringify(gameData)
+          }).then(response => {
+            _this.token = response.body.token
+            _this.saved = true
+            console.log('Game Saved', response)
+          })
+          this.openSuccess = false
+          this.tooBad = false
+          if (clearData) {
+            this.getHomographDialog = true
+          }
         }
       },
       clear () {
@@ -434,6 +455,7 @@
         this.difficulty = 0.85
         this.frequency = 0.10
         this.chosenLanguage = ''
+        this.saved = false
       }
     }
   }
@@ -478,7 +500,6 @@
   .settings {
     height: 350px;
   }
-
 
   .controls {
     .mu-raised-button {

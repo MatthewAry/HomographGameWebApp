@@ -12,6 +12,8 @@
 </script>
 
 <style>
+  @import url('https://fonts.googleapis.com/css?family=Roboto:400,500,700,900');
+
   #app {
     font-family: 'Avenir', Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -44,12 +46,12 @@
     right: 0;
   }
 
+
   @font-face {
     font-family: 'arial-unicode';
     src: url('./assets/arial-unicode-ms.eot');
     src: url('./assets/arial-unicode-ms.eot?#iefix') format('embedded-opentype'),
     url('./assets/arial-unicode-ms.svg#my-font-family') format('svg'),
-    url('./assets/arial-unicode-ms.woff') format('woff'),
     url('./assets/arial-unicode-ms.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
