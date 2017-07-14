@@ -23,8 +23,8 @@
     margin-top: 60px;
   }
 
-  body {
-    background-color: #e3e3e3;
+  body, html {
+    background-color: #e3e3e3 !important;
   }
 
   *,
