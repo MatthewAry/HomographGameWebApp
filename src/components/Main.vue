@@ -338,7 +338,6 @@
           token: _this.token
         }).then(response => {
           let receivedData = response.body
-          console.log(receivedData)
           _this.homograph = receivedData.altered_string
           _this.originalText = receivedData.string
           _this.homographData = receivedData.homographs
@@ -394,8 +393,11 @@
         })
       },
       printHomographDataToConsole () {
-        console.info(this.homographData)
-        _.each(this.homographData, function (o) {
+        let homographData = _.sortBy(this.homographData, function (o) {
+          return o.word_index
+        })
+        console.info(homographData)
+        _.each(homographData, function (o) {
           console.info('Look For ' + o.character_changed_to + ' in word "' + o.original_word + '" at index ' + String(o.word_index))
         })
       },
